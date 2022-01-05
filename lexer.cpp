@@ -17,6 +17,12 @@ Token::Token(const Token &that)
       value_.StringValue = new std::string(*that.value_.StringValue);
       break;
     }
+    //1.2. (b) Adjust the copy constructor (Token::Token(const Token &t)) and the assignment operator
+    case Kind::INT: {
+      //value_.IntValue = new std::uint64_t(that.value_.IntValue);
+      value_.IntValue = that.value_.IntValue;
+      break;
+    }
     default: {
       break;
     }
@@ -42,6 +48,11 @@ Token &Token::operator=(const Token &that)
     case Kind::STRING:
     case Kind::IDENT: {
       value_.StringValue = new std::string(*that.value_.StringValue);
+      break;
+    }
+    //1.2. (b). (Token &Token::operator=(const Token &t)) to also copy the integer payload of the token. 
+    case Kind::INT: {
+      value_.IntValue = that.value_.IntValue;
       break;
     }
     default: {
@@ -83,6 +94,15 @@ Token Token::String(const Location &l, const std::string &str)
 }
 
 // -----------------------------------------------------------------------------
+// 1.2. (a) Add a static factory method to the token class, constructing a token from a location an a uint64_t payload.
+Token Token::Integer(const Location &l, const uint64_t &nr)
+{
+  Token tk(l, Kind::INT);
+  tk.value_.IntValue = nr;
+  return tk;
+}
+
+// -----------------------------------------------------------------------------
 void Token::Print(std::ostream &os) const
 {
   os << kind_;
@@ -112,6 +132,13 @@ std::ostream &operator<<(std::ostream &os, const Token::Kind kind)
     case Token::Kind::FUNC: return os << "func";
     case Token::Kind::RETURN: return os << "return";
     case Token::Kind::WHILE: return os << "while";
+    
+    //2.3.
+    case Token::Kind::IF: return os << "if";
+    case Token::Kind::ELSE: return os << "else";
+    //3.1.
+    case Token::Kind::LET: return os << "let";
+
     case Token::Kind::LPAREN: return os << "(";
     case Token::Kind::RPAREN: return os << ")";
     case Token::Kind::LBRACE: return os << "{";
@@ -119,8 +146,16 @@ std::ostream &operator<<(std::ostream &os, const Token::Kind kind)
     case Token::Kind::COLON: return os << ":";
     case Token::Kind::SEMI: return os << ";";
     case Token::Kind::EQUAL: return os << "=";
+
+    //2.2.a Add the required tokens to the lexer (==, *, /, % and -)
+    case Token::Kind::EQUALS: return os << "==";
     case Token::Kind::COMMA: return os << ",";
     case Token::Kind::PLUS: return os << "+";
+    case Token::Kind::MINUS: return os << "-";
+    case Token::Kind::MUL: return os << "*";
+    case Token::Kind::DIV: return os << "/";
+    case Token::Kind::MOD: return os << "%";
+
     case Token::Kind::END: return os << "END";
     case Token::Kind::INT: return os << "INT";
     case Token::Kind::STRING: return os << "STRING";
@@ -164,6 +199,12 @@ static bool IsIdentLetter(char chr)
   return IsIdentStart(chr) || isdigit(chr);
 }
 
+// -----for-------------------------------------------------------------------
+static bool IsDigit(char chr)
+{
+  return isdigit(chr);
+}
+
 // -----------------------------------------------------------------------------
 const Token &Lexer::Next()
 {
@@ -180,8 +221,23 @@ const Token &Lexer::Next()
     case '}': return NextChar(), tk_ = Token::RBrace(loc);
     case ':': return NextChar(), tk_ = Token::Colon(loc);
     case ';': return NextChar(), tk_ = Token::Semi(loc);
-    case '=': return NextChar(), tk_ = Token::Equal(loc);
+    //2.2.a Add the required tokens to the lexer (==, *, /, % and -)
+    case '=': {
+      //we need to check if the next char is also '=' -> different token
+      NextChar();
+      if(chr_ == '='){        
+        NextChar();
+        return tk_ = Token::Equals(loc); // ==
+      }
+      else           
+        return NextChar(), tk_ = Token::Equal(loc);
+    }
+    
     case '+': return NextChar(), tk_ = Token::Plus(loc);
+    case '-': return NextChar(), tk_ = Token::Minus(loc);
+    case '*': return NextChar(), tk_ = Token::Mul(loc);
+    case '/': return NextChar(), tk_ = Token::Div(loc);
+    case '%': return NextChar(), tk_ = Token::Mod(loc);
     case ',': return NextChar(), tk_ = Token::Comma(loc);
     case '"': {
       std::string word;
@@ -199,15 +255,37 @@ const Token &Lexer::Next()
     default: {
       if (IsIdentStart(chr_)) {
         std::string word;
+        //read the word untill it finishes
         do {
           word.push_back(chr_);
           NextChar();
         } while (IsIdentLetter(chr_));
+        //return token for special words
         if (word == "func") return tk_ = Token::Func(loc);
         if (word == "return") return tk_ = Token::Return(loc);
         if (word == "while") return tk_ = Token::While(loc);
+        //2.3.
+        if (word == "if") return tk_ = Token::If(loc);
+        if (word == "else") return tk_ = Token::Else(loc);
+        //3.1.
+        if (word == "let") return tk_ = Token::Let(loc);
+
         return tk_ = Token::Ident(loc, word);
       }
+
+      // 1.2. (c) In lexer.cpp, find a suitable point to detect the presence of digits, convert them to an integer
+      // and return the appropriate token.
+      else
+        if(IsDigit(chr_)){
+          //we need to read the number until the end
+          std::string number;
+          //while the chr_ is digit, read next char
+          do {
+            number.push_back(chr_);//and push the digit on the stack
+            NextChar();
+          } while (IsDigit(chr_));
+          return tk_ = Token::Integer(loc, stoi(number));
+        }
       Error("unknown character '" + std::string(1, chr_) + "'");
     }
   }

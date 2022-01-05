@@ -89,6 +89,7 @@ std::shared_ptr<Stmt> Parser::ParseStmt()
     case Token::Kind::RETURN: return ParseReturnStmt();
     case Token::Kind::WHILE: return ParseWhileStmt();
     case Token::Kind::LBRACE: return ParseBlockStmt();
+    case Token::Kind::LET: return ParseLetStmt();
     default: return std::make_shared<ExprStmt>(ParseExpr());
   }
 }
@@ -144,6 +145,16 @@ std::shared_ptr<Expr> Parser::ParseTermExpr()
           std::make_shared<RefExpr>(ident)
       );
     }
+    // 1.3. (b) In parser.cpp, extend the ParseTermExpr method to also handle integers, constructing an in-
+    // stance of the node you have defined earlier.
+    case Token::Kind::INT: {
+      //extract the integer form the token
+      uint64_t integer = tk.GetInteger();
+      lexer_.Next();
+      return std::static_pointer_cast<Expr>(
+          std::make_shared<IntExpr>(integer)
+      );
+    }
     default: {
       std::ostringstream os;
       os << "unexpected " << tk << ", expecting term";
@@ -153,6 +164,7 @@ std::shared_ptr<Expr> Parser::ParseTermExpr()
 }
 
 // -----------------------------------------------------------------------------
+// (expr)
 std::shared_ptr<Expr> Parser::ParseCallExpr()
 {
   std::shared_ptr<Expr> callee = ParseTermExpr();
@@ -172,14 +184,61 @@ std::shared_ptr<Expr> Parser::ParseCallExpr()
 }
 
 // -----------------------------------------------------------------------------
+// 2.2 add-expr := mul-expr [PLUS mul-expr]*
 std::shared_ptr<Expr> Parser::ParseAddSubExpr()
 {
+  std::shared_ptr<Expr> term = ParseMulDivModExpr();
+  while (Current().Is(Token::Kind::PLUS) || Current().Is(Token::Kind::MINUS)) {
+    
+    lexer_.Next();
+    auto rhs = ParseMulDivModExpr();
+
+    if(Current().Is(Token::Kind::PLUS))
+      term = std::make_shared<BinaryExpr>(BinaryExpr::Kind::ADD, term, rhs);
+    else          //Token::Kind::SUB
+      term = std::make_shared<BinaryExpr>(BinaryExpr::Kind::SUB, term, rhs);
+
+  }
+  return term;
+}
+
+// ------------------------------------------------------------------------------------------------
+// 2.2.c Produce the AST nodes in the parser, taking care of precedence and associativity. (*, /)
+// mul-expr := term [MUL term]*
+std::shared_ptr<Expr> Parser::ParseMulDivModExpr()
+{
   std::shared_ptr<Expr> term = ParseCallExpr();
-  while (Current().Is(Token::Kind::PLUS)) {
+  while (Current().Is(Token::Kind::MUL) || Current().Is(Token::Kind::DIV) || Current().Is(Token::Kind::MOD)) {
+    
     lexer_.Next();
     auto rhs = ParseCallExpr();
-    term = std::make_shared<BinaryExpr>(BinaryExpr::Kind::ADD, term, rhs);
+    
+    if(Current().Is(Token::Kind::MUL))
+      term = std::make_shared<BinaryExpr>(BinaryExpr::Kind::MUL, term, rhs);
+
+    if(Current().Is(Token::Kind::DIV))
+      term = std::make_shared<BinaryExpr>(BinaryExpr::Kind::DIV, term, rhs);
+
+    if(Current().Is(Token::Kind::MOD))
+      term = std::make_shared<BinaryExpr>(BinaryExpr::Kind::MOD, term, rhs);
+
   }
+  return term;
+}
+
+// ------------------------------------------------------------------------------------------------
+// 1 + (2 * 3) - 6
+std::shared_ptr<Expr> Parser::ParseEqualityExpr()
+{
+  std::shared_ptr<Expr> term = ParseAddSubExpr();
+
+  while (Current().Is(Token::Kind::EQUALS)) {
+    lexer_.Next();
+    auto rhs = ParseAddSubExpr(); 
+    term = std::make_shared<BinaryExpr>(BinaryExpr::Kind::EQUALS, term, rhs);
+  }
+  
+  
   return term;
 }
 

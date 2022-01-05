@@ -16,12 +16,20 @@
 enum class Opcode : uint8_t {
   PUSH_FUNC,
   PUSH_PROTO,
+  PUSH_INT,  //1.4.a In program.h, define and document a new opcode PUSH_INT which will place a constant at the top of the stack.
 
   PEEK,
   POP,
   CALL,
 
   ADD,
+  SUB,
+  MUL,
+  DIV,
+  MOD,
+
+  EQUALS,
+
   RET,
 
   JUMP_FALSE,

@@ -21,6 +21,9 @@ public:
   enum class Kind {
     BLOCK,
     WHILE,
+    IF,
+    //3.2.
+    LET,
     EXPR,
     RETURN
   };
@@ -45,6 +48,7 @@ public:
     REF,
     BINARY,
     CALL,
+    INT,  // 1.3. (a) In ast.h, add a new expression kind to represent integers 
   };
 
 public:
@@ -82,7 +86,7 @@ class BinaryExpr : public Expr {
 public:
   /// Enumeration of binary operators.
   enum class Kind {
-    ADD
+    ADD, SUB, MUL, DIV, MOD, EQUALS //2.2.c
   };
 
 public:
@@ -132,6 +136,29 @@ public:
 private:
   std::shared_ptr<Expr> callee_;
   ArgList args_;
+
+  
+};
+
+/**
+ * Int expression.
+ */
+// 1.3 (a) In ast.h, create another subclass of Expr to represent integers.
+class IntExpr : public Expr {
+
+public:
+  IntExpr(
+     const uint64_t &integer)
+    : Expr(Kind::INT)
+    , nr(integer) //class field nr = integer (parameter))
+  {
+  }
+  //getter
+  const uint64_t &GetNr() const { return nr; }
+  //we can't really extract any other information about an integer, so no functions declared here
+  
+private:
+  uint64_t nr;
 };
 
 /**
@@ -215,6 +242,67 @@ private:
   /// Expression to be executed in the loop body.
   std::shared_ptr<Stmt> stmt_;
 };
+
+/**
+ * If statement.
+ *
+ * if (<cond>) <stmt> else <stmt> 
+ */
+
+// 2.4. Define an AST node, IfStmt, deriving from Stmt, to represent if statements, ensuring the pres-
+// ence of an optional alternative branch for any statement after an else keyword. The class should
+// have a method std::shared_ptr<Stmt> GetElseStmt() const to return the alternative if present or
+// nullptr otherwise.
+class IfStmt final : public Stmt {
+public:
+  IfStmt(std::shared_ptr<Expr> cond, std::shared_ptr<Stmt> stmt, std::shared_ptr<Stmt> else_stmt)
+    : Stmt(Kind::IF)
+    , cond_(cond)
+    , stmt_(stmt)
+    , else_stmt_(else_stmt)
+  {
+  }
+
+  const Expr &GetCond() const { return *cond_; }
+  const Stmt &GetStmt() const { return *stmt_; }
+  const std::shared_ptr<Stmt> GetElseStmt() const { return else_stmt_; }
+
+private:
+  /// Condition for if.
+  std::shared_ptr<Expr> cond_;
+  /// Expression to be executed if the condition is true.
+  std::shared_ptr<Stmt> stmt_;
+  /// Expression to be executed if the condition is false.
+  std::shared_ptr<Stmt> else_stmt_;
+};
+
+//3.2. Define a new AST node, LetStmt, to represent declarations, capturing the name, type and the expression
+// computing the initial value
+class LetStmt final : public Stmt {
+public:
+  LetStmt(std::string name, std::string declared_type, std::shared_ptr<Expr> expression)
+    : Stmt(Kind::LET)
+    , name_(name)
+    , declared_type_(declared_type)
+    , expression_(expression) 
+  {
+  }
+
+  const std::string &GetName() const { return name_; }
+  const std::string &GetType() const { return declared_type_; }
+  const Expr GetExpression() const { return *expression_; }
+
+private:
+  /// The name of the variable.
+  std::string name_;
+  /// The type of the variable.
+  std::string declared_type_;
+  /// The expression computing the initial value.
+  std::shared_ptr<Expr> expression_;
+};
+
+
+
 
 /**
  * Base class for internal and external function declarations.

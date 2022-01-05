@@ -21,6 +21,14 @@ void Interp::Run()
         Push(prog_.Read<RuntimeFn>(pc_));
         continue;
       }
+      case Opcode::PUSH_INT: {
+        // 1.4.b. In interp.cpp, implement the evaluation rules for the new opcode. Decode a 64-bit signed
+        // constant from the program (similarly to the way offsets are defined for PEEK) and push it onto the stack.
+
+        //uint64_t nr = prog_.Read<uint64_t>(pc_);
+        Push(prog_.Read<uint64_t>(pc_));
+        continue;
+      }
       case Opcode::PEEK: {
         auto idx = prog_.Read<unsigned>(pc_);
         Push(*(stack_.rbegin() + idx));
@@ -51,8 +59,44 @@ void Interp::Run()
       case Opcode::ADD: {
         auto rhs = PopInt();
         auto lhs = PopInt();
+        // 1.6. In some instances, the ADD opcode can produce invalid results. Instead of silently 
+        // continuing, throw a runtime error if this happens.
+        if ((rhs > 0 && lhs > INT64_MAX - rhs))
+          throw RuntimeError("Addition throws integer overflow");
         Push(lhs + rhs);
         continue;
+      }
+      case Opcode::SUB: {
+        auto rhs = PopInt();
+        auto lhs = PopInt();
+        Push(lhs - rhs);
+        continue;
+      }
+      //2.2.b Define the appropriate binary operators. (==, *, /, % and -)
+      case Opcode::MUL: {
+        auto rhs = PopInt();
+        auto lhs = PopInt();
+        Push(lhs * lhs);
+        continue;
+      }
+      case Opcode::DIV: {
+        auto rhs = PopInt();
+        auto lhs = PopInt();
+        Push(lhs / lhs);
+        continue;
+      }
+      case Opcode::MOD: {
+        auto rhs = PopInt();
+        auto lhs = PopInt();
+        Push(lhs % lhs);
+        continue;
+      }
+      case Opcode::EQUALS: {
+          auto rhs = PopInt();
+          auto lhs = PopInt();
+          long res = rhs == lhs;
+          Push(res);
+          continue;
       }
       case Opcode::RET: {
         auto depth = prog_.Read<unsigned>(pc_);

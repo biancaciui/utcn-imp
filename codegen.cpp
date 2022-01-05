@@ -114,6 +114,14 @@ void Codegen::LowerStmt(const Scope &scope, const Stmt &stmt)
     case Stmt::Kind::WHILE: {
       return LowerWhileStmt(scope, static_cast<const WhileStmt &>(stmt));
     }
+    //2.5.b
+    case Stmt::Kind::IF: {
+      return LowerIfStmt(scope, static_cast<const IfStmt &>(stmt));
+    }
+    //3.2.
+    case Stmt::Kind::LET: {
+      return LowerLetStmt(scope, static_cast<const LetStmt &>(stmt));
+    }
     case Stmt::Kind::EXPR: {
       return LowerExprStmt(scope, static_cast<const ExprStmt &>(stmt));
     }
@@ -151,6 +159,25 @@ void Codegen::LowerWhileStmt(const Scope &scope, const WhileStmt &whileStmt)
 }
 
 // -----------------------------------------------------------------------------
+// 2.5. Compile if statements to bytecode, distinguishing two cases based on the presence of an alternative.
+// The lowering of the statement should follow the following pattern, ensuring that in the absence of an
+// else branch, no redundant jump is emitted.
+// 2.5.b. Lower the condition check and emit a conditional jump
+void Codegen::LowerIfStmt(const Scope &scope, const IfStmt &ifStmt)
+{
+  auto entry = MakeLabel();
+  auto exit = MakeLabel();
+
+  // EmitLabel(entry);
+  // LowerExpr(scope, ifStmt.GetCond());
+  // EmitJumpFalse(exit);
+  // LowerStmt(scope, ifStmt.GetStmt());
+  // EmitJump(entry);
+  // EmitLabel(exit);
+}
+
+
+// -----------------------------------------------------------------------------
 void Codegen::LowerReturnStmt(const Scope &scope, const ReturnStmt &retStmt)
 {
   LowerExpr(scope, retStmt.GetExpr());
@@ -173,6 +200,15 @@ void Codegen::LowerExpr(const Scope &scope, const Expr &expr)
     }
     case Expr::Kind::BINARY: {
       return LowerBinaryExpr(scope, static_cast<const BinaryExpr &>(expr));
+    }
+    case Expr::Kind::INT: {
+
+      // 1.5.a In codegen.cpp, find the point where the node is traversed and emit the
+      // opcode followed by the integer payload of the node as its sole argument.
+
+      //return LowerIntegerExpr(scope, static_cast<const IntExpr &>(expr));
+
+      EmitPushInt(static_cast<const IntExpr &>(expr).GetNr());
     }
     case Expr::Kind::CALL: {
       return LowerCallExpr(scope, static_cast<const CallExpr &>(expr));
@@ -209,8 +245,25 @@ void Codegen::LowerBinaryExpr(const Scope &scope, const BinaryExpr &binary)
     case BinaryExpr::Kind::ADD: {
       return EmitAdd();
     }
+    //2.2 
+    case BinaryExpr::Kind::SUB: {
+      return EmitSub();
+    }
+     case BinaryExpr::Kind::MUL: {
+      return EmitMul();
+    }
+    case BinaryExpr::Kind::DIV: {
+      return EmitDiv();
+    }
+    case BinaryExpr::Kind::MOD: {
+      return EmitMod();
+    }
+    case BinaryExpr::Kind::EQUALS: {
+      return EmitEquals();
+    }
   }
 }
+// -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 void Codegen::LowerCallExpr(const Scope &scope, const CallExpr &call)
@@ -221,6 +274,11 @@ void Codegen::LowerCallExpr(const Scope &scope, const CallExpr &call)
   LowerExpr(scope, call.GetCallee());
   EmitCall(call.arg_size());
   depth_ -= call.arg_size();
+}
+
+//3.2
+void Codegen::LowerLetStmt(const Scope &scope, const LetStmt &letStmt){
+  
 }
 
 // -----------------------------------------------------------------------------
@@ -307,6 +365,16 @@ void Codegen::EmitPushFunc(Label entry)
 }
 
 // -----------------------------------------------------------------------------
+// 1.5.a In codegen.cpp, find the point where the node is traversed and emit the opcode followed by the
+// integer payload of the node as its sole argument.
+void Codegen::EmitPushInt(uint64_t integer)
+{
+  depth_ += 1;
+  Emit<Opcode>(Opcode::PUSH_INT);
+  Emit<int64_t>(integer);
+}
+
+// -----------------------------------------------------------------------------
 void Codegen::EmitPushProto(RuntimeFn fn)
 {
   depth_ += 1;
@@ -339,6 +407,41 @@ void Codegen::EmitAdd()
   depth_ -= 1;
   Emit<Opcode>(Opcode::ADD);
 }
+// -----------------------------------------------------------------------------
+//  2.2.
+void Codegen::EmitSub()
+{
+  assert(depth_ > 0 && "no elements on stack");
+  depth_ -= 1;
+  Emit<Opcode>(Opcode::SUB);
+}
+void Codegen::EmitMul()
+{
+  assert(depth_ > 0 && "no elements on stack");
+  depth_ -= 1;
+  Emit<Opcode>(Opcode::MUL);
+}
+// -----------------------------------------------------------------------------
+void Codegen::EmitDiv()
+{
+  assert(depth_ > 0 && "no elements on stack");
+  depth_ -= 1;
+  Emit<Opcode>(Opcode::DIV);
+}
+void Codegen::EmitMod()
+{
+  assert(depth_ > 0 && "no elements on stack");
+  depth_ -= 1;
+  Emit<Opcode>(Opcode::MOD);
+}
+// -----------------------------------------------------------------------------
+void Codegen::EmitEquals()
+{
+  assert(depth_ > 0 && "no elements on stack");
+  depth_ -= 1;
+  Emit<Opcode>(Opcode::EQUALS);
+}
+
 
 // -----------------------------------------------------------------------------
 void Codegen::EmitJumpFalse(Label label)

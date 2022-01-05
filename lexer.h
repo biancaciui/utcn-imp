@@ -37,6 +37,13 @@ public:
     FUNC,
     RETURN,
     WHILE,
+    //2.3. The function now relies on if statements - add the keywords used in if statements to the lexer.
+    IF,
+    ELSE,
+
+    //3.1. Identify the new (LET) keyword and add it to the lexer.
+    LET,
+
     // Symbols.
     LPAREN,
     RPAREN,
@@ -45,8 +52,13 @@ public:
     COLON,
     SEMI,
     EQUAL,
+    EQUALS,
     COMMA,
     PLUS,
+    MINUS,
+    MUL,
+    DIV,
+    MOD,
     // Complex tokens.
     INT,
     STRING,
@@ -87,6 +99,13 @@ public:
     return *value_.StringValue;
   }
 
+  /// Return the uint64_t value.
+  std::uint64_t GetInteger() const
+  {
+    assert(Is(Kind::INT) && "not an identifier");
+    return value_.IntValue;
+  }
+
   /// Copy operator.
   Token &operator=(const Token &that);
 
@@ -99,14 +118,24 @@ public:
   static Token Colon(const Location &l) { return Token(l, Kind::COLON); }
   static Token Semi(const Location &l) { return Token(l, Kind::SEMI); }
   static Token Equal(const Location &l) { return Token(l, Kind::EQUAL); }
+  static Token Equals(const Location &l) { return Token(l, Kind::EQUALS); }
   static Token Plus(const Location &l) { return Token(l, Kind::PLUS); }
+  static Token Minus(const Location &l) { return Token(l, Kind::MINUS); }
+  static Token Mul(const Location &l) { return Token(l, Kind::MUL); }
+  static Token Mod(const Location &l) { return Token(l, Kind::MOD); }
+  static Token Div(const Location &l) { return Token(l, Kind::DIV); }
   static Token Comma(const Location &l) { return Token(l, Kind::COMMA); }
   static Token Func(const Location &l) { return Token(l, Kind::FUNC); }
   static Token Return(const Location &l) { return Token(l, Kind::RETURN); }
   static Token While(const Location &l) { return Token(l, Kind::WHILE); }
+  //2.3.
+  static Token If(const Location &l) { return Token(l, Kind::IF); }
+  static Token Else(const Location &l) { return Token(l, Kind::ELSE); }
+  //3.1.
+  static Token Let(const Location &l) { return Token(l, Kind::LET); }
   static Token Ident(const Location &l, const std::string &str);
   static Token String(const Location &l, const std::string &str);
-
+  static Token Integer(const Location &l, const std::uint64_t &nr); 
   /// Print the token to a stream.
   void Print(std::ostream &os) const;
 

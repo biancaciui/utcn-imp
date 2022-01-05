@@ -114,6 +114,9 @@ private:
   void LowerBlockStmt(const Scope &scope, const BlockStmt &blockStmt);
   /// Lowers a while statement.
   void LowerWhileStmt(const Scope &scope, const WhileStmt &whileStmt);
+  // 2.5.
+  /// Lowers an if statement.
+  void LowerIfStmt(const Scope &scope, const IfStmt &ifStmt);
   /// Lowers a return statement.
   void LowerReturnStmt(const Scope &scope, const ReturnStmt &returnStmt);
   /// Lowers a standalone expression statement.
@@ -127,6 +130,8 @@ private:
   void LowerBinaryExpr(const Scope &scope, const BinaryExpr &expr);
   /// Lowers a call expression.
   void LowerCallExpr(const Scope &scope, const CallExpr &expr);
+  /// 3.2 Lowers a let expression.
+  void LowerLetStmt(const Scope &scope, const LetStmt &expr);
 
   /// Lowers a function declaration.
   void LowerFuncDecl(const Scope &scope, const FuncDecl &funcDecl);
@@ -141,6 +146,8 @@ private:
   void EmitCall(unsigned nargs);
   /// Push a function address to the stack.
   void EmitPushFunc(Label entry);
+  /// Emit an add opcode.
+  void EmitPushInt(uint64_t integer);
   /// Push a prototype to the stack.
   void EmitPushProto(RuntimeFn fn);
   /// Push the nth value from the stack to the top.
@@ -149,6 +156,19 @@ private:
   void EmitReturn();
   /// Emit an add opcode.
   void EmitAdd();
+  /// Emit an sub opcode.
+  void EmitSub();
+  
+  
+  /// Emit a mul opcode.
+  void EmitMul();
+  /// Emit a div opcode.
+  void EmitDiv();
+  /// Emit a mod opcode.
+  void EmitMod();
+  /// Emit an equals.
+  void EmitEquals();
+
   /// Emit a label.
   void EmitLabel(Label label);
   /// Emit a conditional jump.
